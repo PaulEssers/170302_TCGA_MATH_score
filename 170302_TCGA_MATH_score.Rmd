@@ -21,7 +21,13 @@ sz=20
 # Load TCGA Data
 load("~/Data/20160816_TCGA.Rdata")
 rm(expr.TCGA,expr.TCGA.hc,expr.TCGA.qn,expr.TCGA.rpkm,gene_info.TCGA)
+hpv.status<-read.table("~/Data/nationwidechildrens.org_auxiliary_hnsc.txt",header=F,fill=NA,skip=2,sep="\t")
+colnames(hpv.status)<-as.character(read.table("~/Data/nationwidechildrens.org_auxiliary_hnsc.txt",header=F,fill=NA,skip=0,stringsAsFactors = F,sep="\t")[1,])
+clinical.TCGA<-merge(clinical.TCGA,hpv.status,by="bcr_patient_barcode")
+rm(hpv.status)
 
+
+# Load probabilities
 sensMO.preds<-sapply(best.models,function(current.model){
   load(paste0("../IntermediateData/170127_TCGA_ProbPreds_",current.model,"_3Class.Rdata"))
   row.names(sigExpr)<-clinical.TCGA$bcr_patient_barcode
@@ -29,7 +35,6 @@ sensMO.preds<-sapply(best.models,function(current.model){
   return(sigExpr[,"SensitiveMO"])
 })
 colnames(sensMO.preds)<-paste0(colnames(sensMO.preds),"_sensMO")
-
 
 sensM.preds<-sapply(best.models,function(current.model){
   load(paste0("../IntermediateData/170127_TCGA_ProbPreds_",current.model,"_3Class.Rdata"))
@@ -51,6 +56,9 @@ preds<-cbind(normal.preds,sensM.preds,sensMO.preds)
 rm(normal.preds,sensM.preds,sensMO.preds)
 ```
 
+## Math Calculation version 1
+
+Data from TCGA itself
 
 ```{r}
 math<-read.table("MATH_in_TCGA_Provisional.txt",header=T)
@@ -62,9 +70,44 @@ row.names(full)<-full$bcr_patient_barcode
 full<-full[,-1]
 
 library(corrplot)
-M<-cor(full,method="pearson")
-corrplot(M, method="circle",tl.cex=0.6,tl.col="black")
+# M<-cor(full,method="pearson")
+# corrplot(M, method="circle",tl.cex=0.6,tl.col="black")
 
 M<-cor(full,method="spearman")
 corrplot(M, method="circle",tl.cex=0.6,tl.col="black")
 ```
+
+HPV-negative only
+
+```{r}
+hpv.neg<-clinical.TCGA$bcr_patient_barcode[clinical.TCGA$hpv_status=="Negative"]
+M<-cor(subset(full[row.names(full) %in% hpv.neg,]),method="spearman")
+corrplot(M, method="circle",tl.cex=0.6,tl.col="black")
+```
+
+
+## MATH Calculation version 2
+
+Data from Supplemental Info MATH paper
+
+```{r}
+math<-read.table("MATH_in_TCGA_Publication.txt",header=T)
+math$bcr_patient_barcode<-substr(math$Tumor_Sample_Barcode,1,12)
+math$tissue<-substr(math$Tumor_Sample_Barcode,14,15)
+
+full<-merge(math[math$tissue=="01",2:3],preds,by.x="bcr_patient_barcode",by.y="row.names")
+row.names(full)<-full$bcr_patient_barcode
+full<-full[,-1]
+
+library(corrplot)
+M<-cor(full,method="spearman")
+corrplot(M, method="circle",tl.cex=0.6,tl.col="black")
+```
+
+HPV-negative only
+
+```{r}
+M<-cor(subset(full[row.names(full) %in% hpv.neg,]),method="spearman")
+corrplot(M, method="circle",tl.cex=0.6,tl.col="black")
+```
+
