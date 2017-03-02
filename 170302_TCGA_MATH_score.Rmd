@@ -10,7 +10,16 @@ knitr::opts_chunk$set(echo = TRUE)
 source("../170117_FullCV_(genes_signatures_both)/170117_ClassificationCVfunctions.R")
 ```
 
-## Correlation of MATH Score with DNA repair Signatures
+# Introduction
+
+MATH score is calculated from aggregated variant allele frequencies as a measure of intra-tumour heterogeneity. The hypothesis is that DNA-repair defects increase mutation rates and thus heterogeneity.
+
+Math scores were calculated by David.
+
+
+## Load TCGA Data
+
+Probabilities for all patients were previously calculated
 
 ```{r}
 # Load list of best model
@@ -58,7 +67,7 @@ rm(normal.preds,sensM.preds,sensMO.preds)
 
 ## Math Calculation version 1
 
-Data from TCGA itself
+Data from TCGA itself. 
 
 ```{r}
 math<-read.table("MATH_in_TCGA_Provisional.txt",header=T)
@@ -88,7 +97,7 @@ corrplot(M, method="circle",tl.cex=0.6,tl.col="black")
 
 ## MATH Calculation version 2
 
-Data from Supplemental Info MATH paper
+Data from Supplemental Info MATH paper.
 
 ```{r}
 math<-read.table("MATH_in_TCGA_Publication.txt",header=T)
@@ -111,3 +120,6 @@ M<-cor(subset(full[row.names(full) %in% hpv.neg,]),method="spearman")
 corrplot(M, method="circle",tl.cex=0.6,tl.col="black")
 ```
 
+# Conclusion
+
+There seems so to be no correlation at all
