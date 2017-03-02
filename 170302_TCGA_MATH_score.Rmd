@@ -1,0 +1,70 @@
+---
+title: "170302_TCGA_MATH_score"
+author: "Paul Essers"
+date: "2-3-2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+source("../170117_FullCV_(genes_signatures_both)/170117_ClassificationCVfunctions.R")
+```
+
+## Correlation of MATH Score with DNA repair Signatures
+
+```{r}
+# Load list of best model
+load("../170124_Xenograft_Verification_newModels/bestModels3cl_3f5foverlap.Rdata")
+best.models[best.models=="Real_Class"]<-"combined"
+sz=20
+
+# Load TCGA Data
+load("~/Data/20160816_TCGA.Rdata")
+rm(expr.TCGA,expr.TCGA.hc,expr.TCGA.qn,expr.TCGA.rpkm,gene_info.TCGA)
+
+sensMO.preds<-sapply(best.models,function(current.model){
+  load(paste0("../IntermediateData/170127_TCGA_ProbPreds_",current.model,"_3Class.Rdata"))
+  row.names(sigExpr)<-clinical.TCGA$bcr_patient_barcode
+  sigExpr<-sigExpr[clinical.TCGA$bcr_patient_barcode,]
+  return(sigExpr[,"SensitiveMO"])
+})
+colnames(sensMO.preds)<-paste0(colnames(sensMO.preds),"_sensMO")
+
+
+sensM.preds<-sapply(best.models,function(current.model){
+  load(paste0("../IntermediateData/170127_TCGA_ProbPreds_",current.model,"_3Class.Rdata"))
+  row.names(sigExpr)<-clinical.TCGA$bcr_patient_barcode
+  sigExpr<-sigExpr[clinical.TCGA$bcr_patient_barcode,]
+  return(sigExpr[,"SensitiveM"])
+})
+colnames(sensM.preds)<-paste0(colnames(sensMO.preds),"_sensM")
+
+normal.preds<-sapply(best.models,function(current.model){
+  load(paste0("../IntermediateData/170127_TCGA_ProbPreds_",current.model,"_3Class.Rdata"))
+  row.names(sigExpr)<-clinical.TCGA$bcr_patient_barcode
+  sigExpr<-sigExpr[clinical.TCGA$bcr_patient_barcode,]
+  return(sigExpr[,"Resistant"])
+})
+colnames(normal.preds)<-paste0(colnames(sensMO.preds),"_normal")
+
+preds<-cbind(normal.preds,sensM.preds,sensMO.preds)
+rm(normal.preds,sensM.preds,sensMO.preds)
+```
+
+
+```{r}
+math<-read.table("MATH_in_TCGA_Provisional.txt",header=T)
+math$bcr_patient_barcode<-substr(math$Tumor_Sample_Barcode,1,12)
+math$tissue<-substr(math$Tumor_Sample_Barcode,14,15)
+
+full<-merge(math[math$tissue=="01",2:3],preds,by.x="bcr_patient_barcode",by.y="row.names")
+row.names(full)<-full$bcr_patient_barcode
+full<-full[,-1]
+
+library(corrplot)
+M<-cor(full,method="pearson")
+corrplot(M, method="circle",tl.cex=0.6,tl.col="black")
+
+M<-cor(full,method="spearman")
+corrplot(M, method="circle",tl.cex=0.6,tl.col="black")
+```
